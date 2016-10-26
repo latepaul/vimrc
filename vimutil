@@ -1,0 +1,270 @@
+#!/bin/sh
+#
+# vimutil - a utility script to execute certain commands from within vim
+#
+# Parameters:
+#             $1 - command
+#             $2 - file to act on
+
+COMMAND="$1"
+if [ "$2" != "" ]
+then
+    FILE=`basename $2`
+    DIR=`dirname $2`
+    cd $DIR
+fi
+
+if [ "$COMMAND" = "test" ]
+then
+    echo " ----------------------"
+    echo "+ do not be alarmed!   +"
+    echo "+ this is just a test  +"
+    echo "+ or is it... ?        +"
+    echo " ----------------------"
+    
+fi
+
+chk_file()
+{
+   src=$1
+   tgt=$2
+   label=$3
+
+   cd ~ingres/.vim/doc
+
+   if [ ! -f $tgt -o $src -nt $tgt ]
+   then
+      TMP=/tmp/chk_file.$$
+
+      cols=`stty -a | sed -n -e "s/.*columns \([0-9]*\).*/\1/p"`
+
+      if [ "_$cols" = "_" ]
+      then
+         cols=80
+      fi
+
+      echo "\" vim: filetype=help" > $tgt
+      echo "*PV_$label*" >> $tgt
+      echo " " >> $tgt
+
+      awk -vlabel="[$label]" -vclabel="[${label}...]" '
+
+         BEGIN {
+
+             skip = length( label ) + 3;
+             cskip = length( clabel ) + 3;
+             nl = 0;
+         }
+
+         nl == 1 && $1 == "\"" && $2 == clabel {
+	    
+            line = substr($0, cskip);
+
+            gsub( /^[[:space:]]*/, "", line);
+            gsub( /[[:space:]]*$/, "", line);
+
+            printf( " %s", line);
+
+            next;
+         }
+
+         $1 == "\"" && $2 == label {
+
+            if (nl) printf( "\n");
+
+            line = substr( $0, skip);
+
+            gsub( /[[:space:]]*$/, "", line);
+
+            printf( "%s", line);
+            nl = 1;
+         }
+
+         END { if (nl) printf( "\n") }' $src >$TMP
+
+      awk -vcols=$cols '
+           BEGIN { FS = "~";
+                   lines = 0;
+                   max_cmd = 0;
+           }
+
+           { cmd_key [lines] = $1;
+             details [lines] = $2;
+
+             gsub( /[[:space:]]*$/, "", cmd_key [lines]);
+             gsub( /^[[:space:]]*/, "", details [lines]);
+             gsub( /[[:space:]]*$/, "", details [lines]);
+
+             len = length( cmd_key [lines] );
+
+             if (len > max_cmd) max_cmd = len;
+
+             lines++;
+           }
+
+           END {
+
+             desc = cols - max_cmd - 4;
+
+             for (line = 0; line < lines; line++)
+             {
+                cmd = cmd_key [line];
+                txt = details [line];
+
+                if (txt == "")
+                {
+		   sep = "";
+		}
+		else
+		{
+		   sep = ":";
+		}
+
+		while (length(txt) > desc)
+		{
+		   for (i = desc; i > 0; i--)
+		   {
+		      if (substr(txt, i, 1) == " ")
+		      {
+			 break;
+		      }
+		   }
+
+		   if (i <= 1) break;
+
+		   out = substr(txt, 1, i -1);
+		   txt = substr(txt, i+1);
+
+		   printf(" %-*s %s %s\n", max_cmd, cmd, sep, out);
+
+		   cmd = "";
+		   sep = " ";
+		}
+
+                printf(" %-*s %s %s\n", max_cmd, cmd, sep, txt);
+             }
+           }' $TMP >> $tgt
+
+       rm $TMP
+   fi
+}
+
+if [ "$COMMAND" = "help" ]
+then
+    chk_file $HOME/.vimrc vimhelp.txt "HELP"
+fi
+
+if [ "$COMMAND" = "crib" ]
+then
+    chk_file $HOME/.vimrc vimcrib.txt "CRIB"
+fi
+
+if [ "$COMMAND" = "pop" ]
+then
+    pop $FILE
+    exit $?
+fi
+
+if [ "$COMMAND" = "prelease" ]
+then
+    prelease $FILE
+    exit $?
+fi
+
+if [ "$COMMAND" = "pcomp" ]
+then
+    HVERS=`p have $FILE | awk '{print $3}'`
+    p rcomp -r $HVERS $FILE 
+    exit $?
+fi
+
+if [ "$COMMAND" = "pcomphr" ]
+then
+    p rcomp $FILE 
+    exit $?
+fi
+
+if [ "$COMMAND" = "pgethr" ]
+then
+    TMPFILE=/tmp/${FILE}.$$.hdrev
+    p get -p $FILE > $TMPFILE
+    RET=$?
+    echo $TMPFILE
+    exit $RET
+fi
+
+if [ "$COMMAND" = "pgetcr" ]
+then
+    HVERS=`p have $FILE | awk '{print $3}'`
+    TMPFILE=/tmp/${FILE}.$$.currev
+    p get -r $HVERS -p $FILE > $TMPFILE
+    RET=$?
+    echo $TMPFILE
+    exit $RET
+fi
+
+if [ "$COMMAND" = "jamall" ]
+then
+    cd $ING_SRC
+    jam -q
+    exit $?
+fi
+
+if [ "$COMMAND" = "jamw" ]
+then
+   export COMPILER_WARNINGS=TRUE
+
+   COMMAND="jam"
+fi
+
+if [ "$COMMAND" = "jam" -o "$COMMAND" = "mkdbms" ]
+then
+    cd $DIR
+    
+    #   Build the file being editied in VI
+    
+    if [ ! -f Jamfile ]
+    then
+       echo "No Jamfile"
+       exit
+    fi
+    
+    grist=`awk '
+    
+       $1 == "SubDir" {
+    
+             printf( "<%s", $3);
+    
+             for( i = 4; i < NF; i++)
+             {
+                printf( "!%s", $i);
+             }
+    
+             printf( ">" );
+    
+             done = 1;
+       }
+    
+       END {
+    
+          if (done != 1)
+          {
+             print "NONE"
+          }
+       }' Jamfile`
+    
+    if [ "$grist" = "NONE" ]
+    then
+       echo "ERROR: 'SubDir' not found in Jamfile"
+       exit
+    fi
+    
+    file=`echo $FILE | cut -f1 -d"."`
+    
+    jam $grist$file.o | grep -v "^X100_PREFIX" | grep -v "^\.\.\." | grep -v "^Building Ingres" | grep -v -i  "^Cc "
+fi
+
+if [ "$COMMAND" = "mkdbms" ]       
+then                               
+    mkdbms                         
+fi                                 
