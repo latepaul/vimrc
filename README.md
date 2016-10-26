@@ -1,4 +1,4 @@
-#    Welcome to Paul's Vimrc File Help
+#    Welcome to Paul's Vimrc File
  
 How to set up this vimrc:
  
