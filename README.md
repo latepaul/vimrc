@@ -12,3 +12,4 @@ How to set up this vimrc:
 
 That's it (I think)
 
+test
