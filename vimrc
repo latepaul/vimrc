@@ -60,6 +60,10 @@ let g:indentLine_char = '|'
 let g:indentLine_enabled = 0
 " [HELP] \i  ~ toggle indent lines
 nnoremap <leader>i :IndentLinesToggle<cr>
+" [HELP] \s  ~ search (forwad) using last visual range
+nnoremap <leader>s /\%V
+" [HELP] \r  ~ search (back) using last visual range
+nnoremap <leader>? ?\%V
 
 " tab settings specific to xterm
 if &term=="xterm"
@@ -104,9 +108,9 @@ set wildmode=longest,full
 set wildmenu
 " set the char for completion for use in macros i.e. key mapping (see mapping
 " for m)
-set wildcharm=<right>
+set wildcharm=<tab>
 " [HELP] m ~ list buffers in 'wildmenu'
-nnoremap m  :b <right><right>
+nnoremap m  :b <tab><tab>
 
 " [HELP] \d ~ delete current buffer (close window)
 nnoremap <leader>d  :bd<cr>
