@@ -30,7 +30,7 @@ chk_file()
    tgt=$2
    label=$3
 
-   cd ~ingres/.vim/doc
+   cd $HOME/.vim/doc
 
    if [ ! -f $tgt -o $src -nt $tgt ]
    then
