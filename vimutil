@@ -9,9 +9,14 @@
 COMMAND="$1"
 if [ "$2" != "" ]
 then
-    FILE=`basename $2`
-    DIR=`dirname $2`
-    cd $DIR
+    if [ "$COMMAND" = "help" ]
+    then
+        FILE=$2
+    else
+        FILE=`basename $2`
+        DIR=`dirname $2`
+        cd $DIR
+    fi
 fi
 
 if [ "$COMMAND" = "test" ]
@@ -23,6 +28,11 @@ then
     echo " ----------------------"
     
 fi
+
+ARG3=$3
+ARG4=$4
+ARG5=$5
+ARG6=$6
 
 chk_file()
 {
@@ -184,20 +194,59 @@ then
     exit $?
 fi
 
+if [ "`echo $COMMAND | cut -c-4`" = "pget" ]
+then
+    FILE_EXT=${FILE##*.}
+    if [ -z "$FILE_EXT" -o "$FILE_EXT" = "$FILE" ]
+    then
+        TEST=`head -1 $FILE` 
+        if [ "$TEST" = "#!/bin/sh" -o "$TEST" = ":" ]
+        then
+            FILE_EXT=sh
+        fi
+    fi
+    if [ -n "$FILE_EXT" ]
+    then
+        FILE_EXT=".$FILE_EXT"
+    fi
+fi
+
 if [ "$COMMAND" = "pgethr" ]
 then
-    TMPFILE=/tmp/${FILE}.$$.hdrev
-    p get -p $FILE > $TMPFILE
+    TMPFILE=/tmp/${FILE}.$$.hdrev${FILE_EXT}
+    p get -p $FILE | sed -n "2,$ p"  > $TMPFILE
     RET=$?
     echo $TMPFILE
+    exit $RET
+fi
+
+if [ "$COMMAND" = "pgetrev" ]
+then
+    TMPFILE=/tmp/${FILE}.$$.rev.${ARG3}${FILE_EXT}
+    p get -r ${ARG3} -p $FILE | sed -n "2,$ p" > $TMPFILE
+    RET=$?
+    echo $TMPFILE
+    exit $RET
+fi
+
+if [ "$COMMAND" = "pshowver" ]
+then
+    HVERS=`p have $FILE | awk '{print $3}'`
+    RET=$?
+    if [ $RET -eq 0 ]
+    then
+        printf '%s' $HVERS
+    else
+        echo ""
+    fi
     exit $RET
 fi
 
 if [ "$COMMAND" = "pgetcr" ]
 then
     HVERS=`p have $FILE | awk '{print $3}'`
-    TMPFILE=/tmp/${FILE}.$$.currev
-    p get -r $HVERS -p $FILE > $TMPFILE
+    TMPFILE=/tmp/${FILE}.$$.currev${FILE_EXT}
+    p get -r $HVERS -p $FILE | sed -n "2,$ p" > $TMPFILE
     RET=$?
     echo $TMPFILE
     exit $RET
