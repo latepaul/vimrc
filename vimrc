@@ -49,13 +49,18 @@ set fdm=syntax
 let g:sh_fold_enabled=4
 set foldlevelstart=99
 
+" vertical windows for fugitive Gdiff
 set diffopt+=vertical
+
 set shiftwidth=4
 set expandtab
 set tabstop=8
 
 set t_Sb=m
 set t_Sf=m
+
+" don't sync buffer scrolling in same file
+set noscrollbind
 
 " indentline settings
 let g:indentLine_color_term = 59
@@ -121,13 +126,16 @@ nnoremap <leader>d  :bd<cr>
 nnoremap <leader>x  :bd!<cr>
 " [HELP] \q ~ close window (keep buffer in background)
 nnoremap <leader>q  :q<cr>
+" [HELP] \\q ~ close window (do not save)
+nnoremap <leader><leader>q  :q!<cr>
 
 " always show status line
 set laststatus=2
 let g:lightline = {
       \ 'colorscheme': 'wombat',
       \ }
-set statusline=%F\ %=l/%L,%c%V\ %P
+set statusline=%{fugitive#statusline()}\ %F\ %=l/%L,%c%V\ %P
+"set statusline+=%=l/%L,%c%V\ %P
 
 " define a command Make which is make piped to cwindow i.e. do a make and
 " open the results/error window automatically
@@ -174,19 +182,23 @@ autocmd InsertLeave * call FnInsertChange(2)
 helptags $HOME/.vim/doc
 
 " [HELP] F1  ~ Toggle this help
-nnoremap <F1> :call PaulVimHelp()<CR>
+if !exists("user_vim")
+    nnoremap <F1> :call PaulVimHelp("~/.vimrc")<CR>
+else
+    nnoremap <F1> :call PaulVimHelp(user_vim)<CR>
+endif
 
 " variable to track whether help window is open
 let g:pvhelp_is_open = 0
 
 "function to toggle help
-function! PaulVimHelp()
+function! PaulVimHelp(basefile)
     if g:pvhelp_is_open
         help
         close
         let g:pvhelp_is_open = 0
     else
-        silent !vimutil help
+        execute 'silent !vimutil help ' . a:basefile
         redraw!
         help PV_Help
         let g:pvhelp_is_open = 1
@@ -253,7 +265,11 @@ nnoremap e<F2> :ls<CR>:b<Space>
 " [HELP] F3 ~ save/re-source .vimrc
 nnoremap <f3> :w<CR>:source ~/.vimrc<CR>
 " [HELP] spF3 ~ edit .vimrc
-nnoremap <space><f3> :e ~/.vimrc<CR>
+if !exists("user_vim")
+    nnoremap <space><f3> :e ~/.vimrc<CR>
+else
+    execute 'nnoremap <space><f3> :e ' . user_vim . '<CR>'
+endif
 " [HELP] cF3 ~ display syntax colours
 nnoremap c<F3> :so $VIMRUNTIME/syntax/hitest.vim<CR>
 
@@ -264,14 +280,27 @@ nnoremap <F4>  :!vimutil pcomp %<CR>
 " [HELP] spF4 ~ p rcompare of current file (against head rev)
 nnoremap <space><F4>  :!vimutil pcomphr %<CR>
 
-" [HELP] vF4 ~ vimdiff of current file (against revisions which was opened)
-nnoremap v<F4>  :call VPDiff(1)<CR>
+" [HELP] vF4 ~ vimdiff of current file (against head rev)
+nnoremap v<F4>  :call VPDiff2(1)<CR>
 
 " [HELP] cF4 ~ vimdiff of current file (against revisions which was opened)
-nnoremap c<F4>  :call VPDiff(0)<CR>
+nnoremap c<F4>  :call VPDiff2(0)<CR>
+
+" [HELP] tF4 ~ vimdiff of current file (against revision entered by user)
+nnoremap t<F4>  :call VPDiff2(2)<CR>
 
 function! VPDiff(type)
-    if a:type == 1
+    if a:type == 2
+      let cver = system("vimutil pshowver " . bufname("%"))
+      call inputsave()
+      let inptxt = "Diff with rev (" . cver . ") "
+      let urev = input(inptxt)
+      call inputrestore()
+      if urev == ""
+          let urev = cver
+      endif
+      let dfile = system("vimutil pgetrev " . bufname("%") . " " . urev)
+    elseif a:type == 1
       let dfile = system("vimutil pgethr " . bufname("%"))
     else
       let dfile = system("vimutil pgetcr " . bufname("%"))
@@ -280,6 +309,59 @@ function! VPDiff(type)
     let cmd = system("rm " . dfile)
 endfunc
 
+" [HELP] fF4 ~ filelog of current file in vert split
+nnoremap f<F4>  :call Filelog(1)<CR>
+function! Filelog(type)
+    if a:type == 1
+        execute 'vnew | 0read ! p filelog ' . expand('%')
+    else
+        execute 'new | 0read ! p filelog ' . expand('%')
+    endif
+    call cursor(1,1)
+    execute ":set buftype=nofile"
+"   execute 'vnew | 0read ! p get -r 82 -p ' expand('%')
+endfunc
+
+nnoremap y<F4>  :call VPDiff2(2)<CR>
+function! VPDiff2(type)
+    let ftype = &ft
+    let fname = expand("%:p:t")
+    let bname = bufname("%")
+    let bpath = expand("%:p:h")
+    let cver = systemlist("cd " . bpath . "; p have " . fname . " | awk '{print $3}'")[0]
+    if a:type == 2
+        call inputsave()
+        let inptxt = "Diff with rev (" . cver . ") "
+        let urev = input(inptxt)
+        call inputrestore()
+        if (urev == '')
+            let urev = cver
+        endif
+    elseif a:type == 1
+        "get headrevs rev no
+        let urev = system("cd " . bpath . " ; p need " . fname .  " 2>&1  | awk 'BEGIN { n = 3 } /is up to/ { n = 9 } {printf( \"%s\", $n); exit}'")
+    else
+        let urev = cver
+    endif
+    let bname = bname.".rev-".urev
+    let cmd = 'vnew | 0read ! cd ' . bpath . '; p get -r ' . urev . ' -p '.fname. ' | grep -v "^==="'
+    execute cmd
+    silent normal! $Gdd
+    execute "set bh=delete"
+    execute 'set filetype='.ftype
+    execute 'silent file '. bname
+    execute ":set buftype=nofile"
+    windo diffthis
+    call GotoBuf(bname)
+    silent normal! 1G]c
+   
+endfunc
+
+function! GotoBuf(bufname)
+    let n = bufwinnr(a:bufname)
+    let cmd=n."wincmd w"
+    execute cmd
+endfunc
 " [HELP] ff ~ toggle fold of current syntax block
 nmap ff  za
 " [HELP] == ~ indent current code block
@@ -331,7 +413,6 @@ function! FindFixme()
         cw
 endfunction
 " [HELP] \f ~ list FIXME's in currrent file
-"nnoremap <leader>f :call FindFixme()<CR>
 nnoremap <leader>f :vimgrep /TODO<Bslash><Bar>FIXME/j % <Bar> cw<CR>
 " [HELP] \c ~ close quickfix window
 nnoremap <leader>c :ccl<CR>
@@ -441,6 +522,8 @@ nnoremap <leader>k :call Colortest()<CR>
 " [HELP] Ctrl-6 ~ cycle through buffers
 " [HELP] Ctrl-W s ~ split and create new window (SAME file)
 " [HELP] Ctrl-W n ~ split and create new window (NEW file)
+" [HELP] ]c ~ next diff in vimdiff mode
+" [HELP] [c ~ next diff in vimdiff mode
 " [HELP] :e file ~ edit new file (opens buffer)
 " [HELP] :split file ~ edit new file (in split window)
 " [HELP] :sb #|file ~ split and load buffer
@@ -449,5 +532,5 @@ nnoremap <leader>k :call Colortest()<CR>
 " [HELP] Ctrl-X Ctrl-P ~ in insert mode try to complete current symbol based on contents of current file (previous match)
 " [HELP] Ctrl-X Ctrl-N ~ in insert mode try to complete current symbol based on contents of current file (next match)
 " [HELP] Ctrl-X Ctrl-O ~ in insert mode try to complete current symbol based on known tags, includes fields within structures
-
+" [HELP] v {choose range} ESC /\%Vsearchterm ~ search for 'searchterm' in chosen range, e.g. function
 
