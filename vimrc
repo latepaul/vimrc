@@ -34,6 +34,8 @@ Plugin 'Yggdroot/indentLine'
 
 Plugin 'airblade/vim-gitgutter'
 
+Plugin 'tpope/vim-fugitive'
+
 " All of your Plugins must be added before the following line
 call vundle#end()  
 
@@ -42,11 +44,12 @@ syntax on
 " recognise file types
 filetype plugin indent on
 set omnifunc=syntaxcomplete#Complete
-set completeopt-=preview
+"set completeopt-=preview
 set fdm=syntax
 let g:sh_fold_enabled=4
 set foldlevelstart=99
 
+set diffopt+=vertical
 set shiftwidth=4
 set expandtab
 set tabstop=8
