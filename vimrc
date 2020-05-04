@@ -13,6 +13,7 @@
 
 "TODO - 1) split this into a) settings b) keymappings c) functions
 "TODO - put coding stuff (diff/jam/etc) into functions in a separate file and
+"TODO - put if/endif around work-only stuff 
 "source it
 
 "Actual vimrc stuff:
@@ -694,18 +695,26 @@ nnoremap c<space> :call Darren_Comment()<cr>
 " [HELP] F5 ~ Next Window
 nnoremap <F5>  <C-w>w
 
+" [HELP] F6p ~ run pcomp and open in a new buffer
+nnoremap <F6>p  :call CmdtobufParam("pcomp")<CR>
 " [HELP] F6o ~ run command and open in new buffer
 nnoremap <F6>o  :call Cmdtobuf()<CR>
+
+
 function! Cmdtobuf()
     call inputsave()
     let inpcmd = input("Command:")
     call inputrestore()
+    call CmdtobufParam(inpcmd)
+endfunc
+
+function! CmdtobufParam(cmd)
     let bname = 'cmd_out-'.g:cmdno
     let g:cmdno += 1
-    if (inpcmd != '')
+    if (a:cmd != '')
         let save_split=&splitright
         execute ":set splitright"
-        execute 'vnew | 0read ! '.inpcmd
+        execute 'vnew | 0read ! '.a:cmd
         execute ":silent file ".bname
         execute ":set buftype=nofile"
         if !save_split
