@@ -64,11 +64,12 @@ set noscrollbind
 
 " indentline settings
 let g:indentLine_color_term = 59
-let g:indentLine_char = '|'
+" let g:indentLine_char = '|'
+let g:indentLine_char_list = ['|', '¦', '┆', '┊']
 let g:indentLine_enabled = 0
 " [HELP] \i  ~ toggle indent lines
 nnoremap <leader>i :IndentLinesToggle<cr>
-" [HELP] \s  ~ search (forwad) using last visual range
+" [HELP] \s  ~ search (forward) using last visual range
 nnoremap <leader>s /\%V
 " [HELP] \r  ~ search (back) using last visual range
 nnoremap <leader>? ?\%V
@@ -103,6 +104,23 @@ if &term=="xterm"
       highlight PmenuThumb   ctermfg=white   ctermbg=Gray     cterm=None
       highlight CursorLineNr ctermfg=white
       highlight LineNr ctermfg=darkgrey
+      highlight ColorColumn ctermbg=238
+      highlight Normal ctermbg=232
+ elseif &term=="alacritty"
+     set t_Co=256
+     colorscheme flatlandia
+     hi DiffAdd term=bold cterm=bold ctermfg=15 ctermbg=22
+"     highlight DiffAdd term=reverse cterm=bold ctermbg=59  ctermfg=gray
+"     highlight DiffChange term=reverse cterm=bold ctermbg=59 ctermfg=gray
+"     highlight DiffText term=reverse cterm=bold ctermbg=59  ctermfg=yellow
+"     highlight DiffDelete cterm=none ctermbg=59  ctermfg=black
+"     highlight NonText term=reverse cterm=bold ctermbg=black  ctermfg=gray
+      highlight Pmenu        ctermfg=gray    ctermbg=241 cterm=None
+      highlight PmenuSel     ctermfg=white   ctermbg=241 cterm=Bold
+      highlight PmenuSbar    ctermfg=Gray    ctermbg=241 cterm=None
+      highlight PmenuThumb   ctermfg=white   ctermbg=Gray     cterm=None
+      highlight CursorLineNr ctermfg=white
+      highlight LineNr ctermfg=darkgrey
       highlight ColorColumn ctermbg=darkgrey
 endif
 
@@ -110,6 +128,8 @@ set t_ut=
 
 "add highlight column at 81
 set colorcolumn=81
+autocmd BufEnter,FocusGained,VimEnter,WinEnter * let &l:colorcolumn=81
+autocmd FocusLost,WinLeave * let &l:colorcolumn='+'.join(range(0,254),',')
 
 " used for completion loading/listing buffers or doing find on files
 set wildmode=longest,full
@@ -131,11 +151,8 @@ nnoremap <leader><leader>q  :q!<cr>
 
 " always show status line
 set laststatus=2
-let g:lightline = {
-      \ 'colorscheme': 'wombat',
-      \ }
 set statusline=%{fugitive#statusline()}\ %F\ %=l/%L,%c%V\ %P
-"set statusline+=%=l/%L,%c%V\ %P
+"set statusline=%=l/%L,%c%V\ %P
 
 " define a command Make which is make piped to cwindow i.e. do a make and
 " open the results/error window automatically
@@ -448,7 +465,7 @@ nnoremap <leader>t  :call ToggleTab()<cr>
 
 
 if has('multi_byte')
-set listchars=tab:��,trail:�,eol:$
+set listchars=tab:»»,trail:·,eol:$
 else
 set listchars=tab:->trail:.,eol:$
 endif
