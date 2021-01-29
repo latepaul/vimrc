@@ -20,28 +20,24 @@
 
 " don't try to be vi-like
 set nocompatible
-" needed to load Vundle
-filetype off
 
-" set the runtime path to include Vundle and initialize
-set rtp+=~/.vim/bundle/Vundle.vim
-call vundle#begin()
-" alternatively, pass a path where Vundle should install plugins
-"call vundle#begin('~/some/path/here')
-"
-" let Vundle manage Vundle, required
-Plugin 'VundleVim/Vundle.vim'
+" vim-plug to manage plugins
+call plug#begin('~/.vim/plugged')
 
-Bundle 'jordwalke/flatlandia'
+Plug 'VundleVim/Vundle.vim'
 
-Plugin 'Yggdroot/indentLine'
+Plug 'jordwalke/flatlandia'
 
-Plugin 'airblade/vim-gitgutter'
+Plug 'Yggdroot/indentLine'
 
-Plugin 'tpope/vim-fugitive'
+Plug 'airblade/vim-gitgutter'
+
+Plug 'tpope/vim-fugitive'
+
+Plug 'rust-lang/rust.vim'
 
 " All of your Plugins must be added before the following line
-call vundle#end()  
+call plug#end()  
 
 " syntax highlighting
 syntax on
