@@ -1,19 +1,19 @@
 "    Welcome to Paul's Vimrc File Help
-" 
+"
 "How to set up this vimrc:
-" 
-"1. Make sure you have ~/.vim/doc and ~/.vim/bundle directories
+"
+"1. Make sure you have ~/.vim/doc directory
 "2. Copy this file to ~/.vimrc
-"3. Install Vundle, i.e.
-"   cd ~/.vim/bundle
-"   git clone https://github.com/VundleVim/Vundle.vim.git
+"3. Install vim-plug, i.e.
+"      curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
+"         https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 "4. First time in vi run :PluginInstall to install plugins, later from time to time :PluginUpdate to update them
 "
 "That's it (I think)
 
 "TODO - 1) split this into a) settings b) keymappings c) functions
 "TODO - put coding stuff (diff/jam/etc) into functions in a separate file and
-"TODO - put if/endif around work-only stuff 
+"TODO - put if/endif around work-only stuff
 "source it
 
 "Actual vimrc stuff:
@@ -21,10 +21,8 @@
 " don't try to be vi-like
 set nocompatible
 
-" vim-plug to manage plugins
+" vim-plug
 call plug#begin('~/.vim/plugged')
-
-Plug 'VundleVim/Vundle.vim'
 
 Plug 'jordwalke/flatlandia'
 
@@ -37,13 +35,16 @@ Plug 'tpope/vim-fugitive'
 Plug 'rust-lang/rust.vim'
 
 " All of your Plugins must be added before the following line
-call plug#end()  
+call plug#end()
+
+" Stop the annoying bell sound
+set vb t_vb=
 
 " syntax highlighting
 syntax on
 " recognise file types
 filetype plugin indent on
-" set omni-complete to use syntax 
+" set omni-complete to use syntax
 set omnifunc=syntaxcomplete#Complete
 " remove preview when showing complete menu. This is a buffer at the top of
 " the screen with extra info. Perhaps useful but left behind after you've
@@ -51,7 +52,7 @@ set omnifunc=syntaxcomplete#Complete
 set completeopt-=preview
 " fold based on syntax
 set fdm=syntax
-" set fold options for shell 
+" set fold options for shell
 "  1 = functions
 "  2 = heredoc
 "  4 = if/do/for
@@ -59,6 +60,16 @@ set fdm=syntax
 let g:sh_fold_enabled=7
 " start with all folds open
 set foldlevelstart=99
+
+" don't search inside folded sections
+set fdo -=search
+
+" filetype for files with C syntax - .sc and .qsc
+augroup ing_c_ft
+    au!
+    autocmd BufNewFile,BufRead *.sc setf esqlc
+    autocmd BufNewFile,BufRead *.qsc setf esqlc 
+augroup END
 
 " vertical windows for fugitive Gdiff
 set diffopt+=vertical
@@ -69,7 +80,7 @@ set shiftwidth=4
 " typing a tab expands to spaces
 set expandtab
 " number of spaces equiv to tabs
-set tabstop=8
+set tabstop=4
 " so auto-indent uses 4 spaces but typing a tab is 8 (tbf vim help says keep
 " tabstop at 8 so...)
 
@@ -95,6 +106,9 @@ nnoremap <leader>i :IndentLinesToggle<cr>
 nnoremap <leader>s /\%V
 " [HELP] \r  ~ search (back) using last visual range
 nnoremap <leader>? ?\%V
+
+" [HELP] \\s Remove all trailing whitespace
+nnoremap <leader><leader>s :let _s=@/<Bar>:%s/\s\+$//e<Bar>:let @/=_s<Bar><CR>
 
 " tab settings specific to xterm
 if &term=="xterm"
@@ -124,19 +138,101 @@ if &term=="xterm"
       highlight PmenuSel     ctermfg=white   ctermbg=241 cterm=Bold
       highlight PmenuSbar    ctermfg=Gray    ctermbg=241 cterm=None
       highlight PmenuThumb   ctermfg=white   ctermbg=Gray     cterm=None
-      highlight LineNr cterm=nocombine ctermfg=grey ctermbg=238
-      highlight LineNrAbove cterm=nocombine ctermfg=grey ctermbg=238
-      highlight LineNrBelow cterm=nocombine ctermfg=grey ctermbg=238
-      highlight CursorLineNr cterm=nocombine ctermfg=white ctermbg=238
-      highlight ColorColumn cterm=nocombine ctermbg=238
-      highlight Normal cterm=nocombine ctermfg=white ctermbg=232
-      highlight NonText cterm=nocombine ctermfg=darkgrey ctermbg=232
+      highlight CursorLineNr ctermfg=white
+" original settings with default flatlandia background
+"     highlight LineNr ctermfg=darkgrey
+"     highlight ColorColumn ctermbg=darkgrey
+" new dark background - works better with focus autocommands - see below
+      highlight LineNr ctermfg=darkgrey ctermbg=232
+      highlight CursorLineNr ctermfg=white ctermbg=232
+      highlight ColorColumn ctermbg=238
+      highlight Normal ctermbg=232
+      highlight Comment ctermfg=darkcyan
+      highlight None ctermbg=232
+      highlight NonText ctermbg=232
+" User1 - goes with StatuslineFocus style 1 (creates a line)
+      highlight User1 ctermfg=darkgrey ctermbg=232
+" User1 - goes with StatuslineFocus style 2 (just changes the colours)
+      highlight User2 ctermfg=grey ctermbg=238
 endif
 
 set t_ut=
 
+" enable mouse
+" allows setting cursor using mouse, picking window, scrolling, resizing
+" currently disabled as it doesn't allow me to select and highlight for
+" windows-level copy and paste
+" set mouse=n
+" needed for resizing of windows with drag
+" set ttymouse=xterm2
+
 "add highlight column at 81
 set colorcolumn=81
+" window with focus has different colours
+" actually you can't set a different colour scheme in different windows
+" what this does instead is fills the window with cursorcolumn's (0-254) in
+" the non-focussed window
+" Keeping for reference but not sure I liked the effect in the end
+"autocmd BufEnter,FocusGained,VimEnter,WinEnter * if ! &diff | let &l:colorcolumn=81 | endif
+"autocmd FocusLost,WinLeave * if ! &diff | let &l:colorcolumn='+'.join(range(0,254),',') | endif
+
+" status line config
+" always show status line
+set laststatus=2
+
+"default statusline - stuff from fugitive, filename, line number, modified
+" indicator (+), position and percentage
+set statusline=%{fugitive#statusline()}\ %F%m\ %=l/%L,%c%V\ %P
+
+" StatuslineFocus - this function sets or unsets the 'focus' of the statusline
+"  it uses setlocal so it only affects current window. Depending on the
+"  argument it either sets the colours to the StatusLine (%#StatusLine#) or
+"  User1 (%1*) or User2
+"
+"  There are 3 styles - 0 = normal statusline, 1 = a line with the filename,
+"                       2 = simplified status with dimmed colours
+"  Usually want to call with 0 with entering a window and either 1 or 2 when
+"  exiting
+function! StatuslineFocus(style)
+    if a:style == 0
+        setlocal statusline=%#StatusLine#%{fugitive#statusline()}\ %F%m\ %=l/%L,%c%V\ %P
+    endif
+
+    if a:style == 1
+        let wlen=winwidth(0)
+        let filenm=expand("%:p:t")
+        let flen=len(filenm)
+        let sline = '%1*'
+        if wlen - 5 > flen
+            let sline=sline . '--'.filenm
+            let wlen = wlen - flen
+            let wlen = wlen -5
+        endif
+        let sline = sline . '%m'
+        let sline = sline . repeat('-',wlen)
+        let &l:statusline=sline
+    endif
+
+    if a:style == 2
+        setlocal statusline=%2*%t%m\ %=%P
+    endif
+endfunction
+
+let g:statline_style = 2
+function! StatlineChgStyle()
+    if g:statline_style == 1
+        let g:statline_style = 2
+    else
+        let g:statline_style = 1
+    endif
+    autocmd FocusLost,WinLeave * call StatuslineFocus(g:statline_style)
+endfunction
+
+autocmd BufEnter,FocusGained,VimEnter,WinEnter * call StatuslineFocus(0)
+autocmd FocusLost,WinLeave * call StatuslineFocus(2)
+
+" [HELP] \v ~ change out of focus statusline style
+nnoremap <leader>v :call StatlineChgStyle()<cr>
 
 " used for completion loading/listing buffers or doing find on files
 set wildmode=longest,full
@@ -149,16 +245,13 @@ nnoremap m  :b <tab><tab>
 
 " [HELP] \d ~ delete current buffer (close window)
 nnoremap <leader>d  :bd<cr>
-" [HELP] \x ~ delete current buffer, discarding outstanding changes 
+" [HELP] \x ~ delete current buffer, discarding outstanding changes
 nnoremap <leader>x  :bd!<cr>
 " [HELP] \q ~ close window (keep buffer in background)
 nnoremap <leader>q  :q<cr>
 " [HELP] \\q ~ close window (do not save)
 nnoremap <leader><leader>q  :q!<cr>
 
-" always show status line
-set laststatus=2
-set statusline=%{fugitive#statusline()}\ %F\ %=l/%L,%c%V\ %P
 "set statusline=%=l/%L,%c%V\ %P
 
 " RunJam() - Do a build (jam)
@@ -167,7 +260,7 @@ set statusline=%{fugitive#statusline()}\ %F\ %=l/%L,%c%V\ %P
 "    type, logtype, warnings
 "
 " type can be:
-"      1 - jam from ING_SRC 
+"      1 - jam from ING_SRC
 "      2 - jam <current file target> (default)
 "      3 - jam curr file and mkdbms
 "
@@ -184,9 +277,9 @@ function! RunJam(...)
     let warnings = 1
     if a:0 > 0
         let type = a:1
-        if a:0 > 1 
+        if a:0 > 1
             let logtype = a:2
-            if a:0 > 2 
+            if a:0 > 2
                 let warnings = a:3
             endif
         endif
@@ -209,7 +302,7 @@ function! RunJam(...)
         " this command attempts to get the directory name from the jam file
         let acmd = 'cd '. srcdir.'; awk ''$1=="SubDir" {printf("<%s",$3); for (i = 4; i < NF; i++) { printf("\\!%s",$i)}printf(">");done=1;} END { if (done != 1) {print "NONE"}}'' Jamfile'
         let res = system(acmd)
-        " two failure modes - no Jamfile (shell_error = 1) or jamfile had no 
+        " two failure modes - no Jamfile (shell_error = 1) or jamfile had no
         " SubDir in it
         " in which case just do a plain "jam -q" in the source directory of
         " the file
@@ -221,7 +314,7 @@ function! RunJam(...)
         let cmd = '( cd ' . srcdir . ' ; jam -q ''' . gfile.''''
     endif
     let cmd = cmd . ' 2>&1 '
-    if type == 3 
+    if type == 3
         let cmd = cmd . '; mkdbms 2>&1 '
     endif
 
@@ -234,11 +327,11 @@ function! RunJam(...)
     if logtype == 1
         " create quickfix from errors and warnings
         let qcmd = 'egrep -e error: '
-        if warnings == 2 
+        if warnings == 2
             let qcmd = qcmd . '-e warning: '
         endif
         let qcmd = qcmd . tmpfile . ' | sort -u'
-        let res=system(qcmd) 
+        let res=system(qcmd)
         silent cexpr res
         cwindow 5
     else
@@ -257,7 +350,7 @@ function! RunJam(...)
     endif
 
     let res = system ('rm -f '. tmpfile)
-    
+
 endfunction
 
 " define commands for versions of RunJam
@@ -276,7 +369,7 @@ let &tags=&tags.',./tags'
 
 " note about path - this allows me to do "find file" or "find pattern<tab>"
 " to load a file. However it's really intended for include files.
-" Turns out vim has its own ctags type stuff using include files, see help 
+" Turns out vim has its own ctags type stuff using include files, see help
 " checkpath or help [i, [d
 " According to this guy:
 " https://begriffs.com/posts/2019-07-19-history-use-vim.html#include-and-path
@@ -387,6 +480,9 @@ endfunction
 " variable to track whether AutoComment is on
  let g:autocomment_is_on = 1
 
+" [HELP] Alt-] ~ save file and do ctrl-] (find tag)
+nnoremap <c-[>] :update<CR><c-]>
+
 " netrw options
 " disable banner
 let g:netrw_banner = 0
@@ -415,7 +511,7 @@ nnoremap <F2> :call NetrwToggle()<CR>
 " [HELP] spF2 ~ list buffers
 nnoremap <space><F2> :ls<CR>
 " [HELP] sF2  ~ list buffers and load one (hit N then enter) into new window
-nnoremap s<F2> :ls<CR>:sb<Space> 
+nnoremap s<F2> :ls<CR>:sb<Space>
 " [HELP] vF2 ~ list buffers and load one (hit N then enter) into new vert-window
 nnoremap v<F2> :ls<CR>:vert sb<Space>
 " [HELP] eF2 ~ list buffers and load one (hit N then enter) into current window
@@ -481,7 +577,7 @@ endfunc
 
 command! -nargs=? PDiff call VPDiff(<q-args>)
 " VPDiff - compare current file with svn/pic version
-"          3 'types' 
+"          3 'types'
 "                    0 - compare with same revision in repo
 "                    1 - compare with headrevs
 "                    2 - compare with a version we prompt for
@@ -507,7 +603,7 @@ function! VPDiff(...)
 "for new buffer
     let ftype = &ft
 
-    " various paths 
+    " various paths
     "     fullnm - full filename including path
     "     filenm - just the filename
     "     bname  - buffer name (usually same as filenm)
@@ -518,7 +614,7 @@ function! VPDiff(...)
     let bpath  = expand("%:p:h")
 
     " keep a copy of original buffer name
-    let obname = bname 
+    let obname = bname
 
 " set srccntrl type 1=svn, 2=piccolo
 " also set srcname - name for messages, and srcrevext for 'rev extension'
@@ -551,7 +647,7 @@ function! VPDiff(...)
         echon "\r"
         echo ''
         if srccntrl == 1
-            let cmd = 'new | silent 0read ! svn cat -r ' . cver . ' ' . fullnm 
+            let cmd = 'new | silent 0read ! svn cat -r ' . cver . ' ' . fullnm
         else
             let cmd = 'new | silent 0read ! cd ' . bpath . '; p get -r ' . cver . ' -p '.filenm. ' | grep -v "^==="'
         endif
@@ -569,7 +665,7 @@ function! VPDiff(...)
         call GotoBuf(b1name)
         let revdef=cver+1
     else
-        " get current revision number 
+        " get current revision number
         if srccntrl == 1
             let cmd = 'svn info ' . fullnm . ' | grep "^Last Changed Rev:" | cut -c19- '
         else
@@ -628,7 +724,7 @@ function! VPDiff(...)
 
     " read the output of 'get this rev'  into new virtical split
     if srccntrl == 1
-        let cmd = 'rightbelow vnew | silent 0read ! svn cat -r ' . urev . ' ' . fullnm 
+        let cmd = 'rightbelow vnew | silent 0read ! svn cat -r ' . urev . ' ' . fullnm
     else
         let cmd = 'rightbelow vnew | silent 0read ! cd ' . bpath . '; p get -r ' . urev . ' -p '.filenm. ' | grep -v "^==="'
     endif
@@ -636,9 +732,9 @@ function! VPDiff(...)
 
     " delete the blank line at the bottom that execute added
     silent normal! $Gdd
- 
+
 "    set some attributes to the new buffer
-"    bh=delete means it will get deleted once we 'hide' it 
+"    bh=delete means it will get deleted once we 'hide' it
     execute "set bh=delete"
     " setting the filetype allows syntax highlighting matching original file
     " regardless of name
@@ -657,7 +753,7 @@ function! VPDiff(...)
     silent normal! 1G]c
 
     " set some autocmd for bufdelete
-    " remove all autocmds first 
+    " remove all autocmds first
     au! * <buffer>
     " vimdiff sets cursorbind (crb) and scrollbind (scb) which is great for
     " the diff. But if we close the new buffer and later open a new virt split
@@ -665,7 +761,7 @@ function! VPDiff(...)
     " especially if we open a new vert window to scroll to another part of the
     " same file
     " so this effectively says, when we close this buffer (the new one)
-    " go to the original and unset crb and scb 
+    " go to the original and unset crb and scb
     let cmd="au BufDelete <buffer> call GotoBuf('" . obname . "')"
     execute cmd
     au BufDelete <buffer> set crb!
@@ -747,7 +843,7 @@ nnoremap <F7>o :only<cr>
 " [HELP] F8 ~ Make Windows equal(ish) size
 nmap <F8>  <c-w>=
 
-" [HELP] \< ~ jump to location of prev build error (in code window)
+" [HELP] \, ~ jump to location of prev build error (in code window)
 nnoremap <leader>, :cp<CR>
 " [HELP] \/ ~ jump to current build error (will be there by default, but if you've moved away, to another buffer, followed a tag)
 nnoremap <leader>/  :cc<CR>
@@ -761,9 +857,16 @@ nnoremap <leader>. :cn<CR>
 nnoremap <F9> :call Psuite(1)<CR>
 command! -nargs=? Pop call Psuite(1)
 function! Psuite(type)
-   
+
     let fname = expand("%:p:t")
     let fpath = expand("%:p:h")
+
+    " save autoread setting and then set it explicitly on
+    " autoread reloads the buffer automatically if the file on disk changes
+    " this will definitely happen if we do a pop or prelease
+    " so set it here but then restore it below
+    let save_autor = &autoread
+    execute ':set autoread'
 
     if a:type == 1
         let pcmd = 'pop'
@@ -773,7 +876,7 @@ function! Psuite(type)
         let getrevres = system("cd " . fpath . "; p have " . fname . " | awk '{print $3}'")
         let cver = split(getrevres)[0]
         if v:shell_error == 0
-            let pcmd = 'p rcompare -r' . cver 
+            let pcmd = 'p rcompare -r' . cver
         else
             echoe "Failed to determine current version for ".fname
             return
@@ -785,6 +888,13 @@ function! Psuite(type)
     endif
 
     execute '!cd ' . fpath .'; ' . pcmd . ' ' . fname
+
+    " restore saved autoread setting
+    if save_autor
+        execute ':set autoread'
+    else
+        execute ':set noautoread'
+    endif
 endfunc
 
 " [HELP] F10 ~ release the current file in psuite and reload in the editor
@@ -803,7 +913,7 @@ nnoremap w<F11> :w<CR>:call RunJam(2,1,2)<cr>
 " [HELP] \F11 ~ save and build the file you're editing with logfile
 " [HELP]  ~ (command :Jam 2)
 nnoremap <leader><F11> :w<CR>:call RunJam(2,2)<cr>
-" [HELP] F12 ~ save, build and mkdbms 
+" [HELP] F12 ~ save, build and mkdbms
 " [HELP]  ~ (command :Jamdbms)
 nnoremap <F12> :w<CR>:call RunJam(3)<cr>
 " [HELP] wF12 ~ save, build and mkdbms with warnings
@@ -813,7 +923,7 @@ nnoremap e<F12> :w<CR>:call RunJam(3,1,2)<cr>
 " [HELP]  ~ (command :Jamdbms 2)
 nnoremap <leader><F12> :w<CR>:call RunJam(3,2)<cr>
 
-" [HELP] F12F12 ~ save and build from ING_SRC 
+" [HELP] F12F12 ~ save and build from ING_SRC
 " [HELP]  ~ (command :Jamall)
 nnoremap <F12><F12> :w<CR>:call RunJam(1)<cr>
 " [HELP] wF12F12 ~ save and build from ING_SRC with warnings
@@ -823,19 +933,21 @@ nnoremap w<F12><F12> :w<CR>:call RunJam(1,1,2)<cr>
 " [HELP]  ~ (command :Jamall 2)
 " [HELP]
 nnoremap <leader><F12><F12> :w<CR>:call RunJam(1,2)<cr>
-" [HELP] Shift-Tab ~ Cycle buffers in current window 
+" [HELP] Shift-Tab ~ Cycle buffers in current window
 nnoremap <S-Tab> :bnext!<CR>
 
 nnoremap ; :
 
 function! FindFixme()
-        vimgrep /TODO\|FIXME/j % 
+        vimgrep /TODO\|FIXME/j %
         cw
 endfunction
 " [HELP] \f ~ list FIXME's in currrent file
 nnoremap <leader>f :vimgrep /TODO<Bslash><Bar>FIXME/j % <Bar> cw<CR>
-" [HELP] \c ~ close quickfix window
-nnoremap <leader>c :ccl<CR>
+" [HELP] \c ~ close next window (other window if only two)
+nnoremap <leader>c <C-w>w:q<CR><C-w>w
+" [HELP] \\c ~ close quickfix window
+nnoremap <leader><leader>c :ccl<CR>
 " [HELP] \l  ~ Toggle special chars view
 nnoremap <leader>l :if &list<cr>set nolist<cr>else<cr>set list<cr>endif<cr><cr>
 " [HELP] \C  ~ restore cursorline highlight of line itself
@@ -963,7 +1075,7 @@ if has("cscope")
 " [HELP] F6d ~ find all functions that function name under cursor calls
         nnoremap <F6>d :cs find d <C-R>=expand("<cword>")<CR><CR>:cw<CR>
 " [HELP] F6e ~ prompt for file and open it
-        nnoremap <F6>e :cs find f 
+        nnoremap <F6>e :cs find f
 " [HELP] F6f ~ open file under cursor
         nnoremap <F6>f :cs find f <C-R>=expand("<cword>")<CR><CR>:cw<CR>
 " [HELP] F6g ~ find global definitions of word under cursor
@@ -972,6 +1084,8 @@ if has("cscope")
         nnoremap <F6>i :cs find i <C-R>=expand("<cword>")<CR><CR>:cw<CR>
 " [HELP] F6s ~ find all references to the token under the cursor
         nnoremap <F6>s :cs find s <C-R>=expand("<cword>")<CR><CR>:cw<CR>
+" [HELP] F6b ~ create gdb breakpoint list from refs to token under cursor
+        nnoremap <F6>b :call CreateCsBList()<CR>
 " [HELP] F6t ~ find all instances of text under cursor
         nnoremap <F6>t :cs find t <C-R>=expand("<cword>")<CR><CR>:cw<CR>
 " [HELP] F6= ~ find all instances of variable under cursor being assigned
@@ -996,6 +1110,74 @@ else
     nnoremap <F6>t :echo "cscope not setup. Please run ctagger."<CR>
 endif
 
+" create a break point list from scope find output
+"
+function! CreateCsBList()
+
+    "save current position - cscope find s takes us to first match
+    " save window, buffername and cursor position
+    let l:winno=winnr()
+    let l:bufname=expand('%')
+    let l:curpos=getpos('.')
+
+    let l:cword=expand("<cword>")
+    execute "cs find s ".l:cword
+    execute ":cw"
+    call CreateBrkList(l:cword)
+
+    " restore save position
+    " jump to window number
+    execute ":".l:winno."wincmd w"
+    " switch to saved buffer name
+    execute ":b ".l:bufname
+    " return to save cursor position
+    call cursor(l:curpos[1],l:curpos[2])
+endfunc
+
+
+" create a break point list from current quickfix window
+function! CreateBrkList(...)
+
+    if a:0 > 0
+        let l:title='# Breakpoint list for '''.a:1.''''
+    else
+        let l:title='# Breakpoint list'
+    endif
+
+    let l:my_list = [l:title, '# copy and paste into gdb','']
+
+    for l:line in getline( 1, line('$'))
+        let l:part = split( l:line, '|')
+        if (len(l:part) > 1)
+            " Get the FULL path of the file. Need to strip of ^@ at
+            " end of the full path returned.
+            let l:file = system( 'realpath ' .  l:part[0] )[:-2]
+
+            call add( l:my_list, "break " . l:file . ":".  l:part[1])
+        endif
+    endfor
+
+    " create new buffer to paste into
+    enew
+
+    " size it to be the size needed or 24 lines whichever is less
+    if len(l:my_list) > 22
+        let l:whsize = 24
+    else
+        let l:whsize = len(l:my_list) + 2
+    endif
+    execute "resize ".l:whsize
+
+    " make it disposable
+    execute ":set buftype=nofile"
+    execute "set bh=delete"
+
+    call append( 0, l:my_list)
+    call append( line('$'), ['# so long and thanks for all the fish!'])
+
+    " goto line 1
+    execute "1"
+endfunc
 " the following are default mappings that are here so they get displayed with
 " help:
 " [HELP] regular vim commands (default mappings)
