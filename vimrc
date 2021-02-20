@@ -480,8 +480,8 @@ endfunction
 " variable to track whether AutoComment is on
  let g:autocomment_is_on = 1
 
-" [HELP] Alt-] ~ save file and do ctrl-] (find tag)
-nnoremap <c-[>] :update<CR><c-]>
+" [HELP] \-] ~ save file and do ctrl-] (find tag)
+nnoremap <leader>] :update<CR><c-]>
 
 " netrw options
 " disable banner
